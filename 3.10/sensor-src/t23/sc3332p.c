@@ -278,7 +278,7 @@ struct tx_isp_sensor_attribute sensor_attr = {
 	.name = SENSOR_NAME,
 	.chip_id = 0xcc44,
 	.cbus_type = TX_SENSOR_CONTROL_INTERFACE_I2C,
-	.cbus_mask = TISP_SBUS_MASK_SAMPLE_8BITS | TISP_SBUS_MASK_ADDR_16BITS,
+	.cbus_mask = V4L2_SBUS_MASK_SAMPLE_8BITS | V4L2_SBUS_MASK_ADDR_16BITS,
 	.cbus_device = 0x30,
 	.max_again = 327680,
 	.max_dgain = 0,
@@ -446,8 +446,8 @@ static struct tx_isp_sensor_win_setting sensor_win_sizes[] = {
 		.width = 2304,
 		.height = 1296,
 		.fps = 15 << 16 | 1,
-		.mbus_code = TISP_VI_FMT_SBGGR10_1X10,
-		.colorspace = TISP_COLORSPACE_SRGB,
+		.mbus_code = V4L2_VI_FMT_SBGGR10_1X10,
+		.colorspace = V4L2_COLORSPACE_SRGB,
 		.regs = sensor_init_regs_2304_1296_30fps_mipi_2lane,
 	}
 };
@@ -627,11 +627,9 @@ static int sensor_set_attr(struct tx_isp_subdev *sd, struct tx_isp_sensor_win_se
 	sensor->video.mbus.width = wsize->width;
 	sensor->video.mbus.height = wsize->height;
 	sensor->video.mbus.code = wsize->mbus_code;
-	sensor->video.mbus.field = TISP_FIELD_NONE;
+	sensor->video.mbus.field = V4L2_FIELD_NONE;
 	sensor->video.mbus.colorspace = wsize->colorspace;
 	sensor->video.fps = wsize->fps;
-	sensor->video.max_fps = wsize->fps;
-	sensor->video.min_fps = SENSOR_OUTPUT_MIN_FPS << 16 | 1;
 
 	return 0;
 }
@@ -683,14 +681,8 @@ static int sensor_set_fps(struct tx_isp_subdev *sd, int fps) {
 	unsigned char val = 0;
 	unsigned int newformat = 0; //the format is 24.8
 	int ret = 0;
-	switch (sensor->info.default_boot) {
-		case 0:
-			sclk = 0xa8c * 15 * 2500; /* 1250 * 0XA8C * 30 * 2 */
-			max_fps = 15;
-			break;
-		default:
-			ISP_ERROR("Now we do not support this framerate!!!\n");
-	}
+	sclk = 0xa8c * 15 * 2500; /* 1250 * 0XA8C * 30 * 2 */
+	max_fps = 15;
 
 	newformat = (((fps >> 16) / (fps & 0xffff)) << 8) + ((((fps >> 16) % (fps & 0xffff)) << 8) / (fps & 0xffff));
 	if (newformat > (max_fps << 8) || newformat < (SENSOR_OUTPUT_MIN_FPS << 8)) {
@@ -773,47 +765,24 @@ static int sensor_attr_check(struct tx_isp_subdev *sd) {
 	unsigned long rate;
 	int ret;
 
-	switch (info->default_boot) {
-		case 0:
-			wsize = &sensor_win_sizes[0];
-			memcpy(&(sensor_attr.mipi), &sensor_mipi, sizeof(sensor_mipi));
-			sensor_attr.data_type = TX_SENSOR_DATA_TYPE_LINEAR;
-			sensor_attr.dbus_type = TX_SENSOR_DATA_INTERFACE_MIPI;
-			sensor_attr.max_integration_time_native = 0XA8C - 8;
-			sensor_attr.integration_time_limit = 0XA8C - 8;
-			sensor_attr.total_width = 2500;
-			sensor_attr.total_height = 0XA8C;
-			sensor_attr.max_integration_time = 0XA8C - 8;
-			sensor_attr.again = 0;
-			sensor_attr.integration_time = 0x700;
-			break;
-		default:
-			ISP_ERROR("Have no this Setting Source!!!\n");
-	}
+	wsize = &sensor_win_sizes[0];
+	memcpy(&(sensor_attr.mipi), &sensor_mipi, sizeof(sensor_mipi));
+	sensor_attr.data_type = TX_SENSOR_DATA_TYPE_LINEAR;
+	sensor_attr.dbus_type = TX_SENSOR_DATA_INTERFACE_MIPI;
+	sensor_attr.max_integration_time_native = 0XA8C - 8;
+	sensor_attr.integration_time_limit = 0XA8C - 8;
+	sensor_attr.total_width = 2500;
+	sensor_attr.total_height = 0XA8C;
+	sensor_attr.max_integration_time = 0XA8C - 8;
+	sensor_attr.again = 0;
+	sensor_attr.integration_time = 0x700;
 
-	switch (info->video_interface) {
-		case TISP_SENSOR_VI_MIPI_CSI0:
-			sensor_attr.dbus_type = TX_SENSOR_DATA_INTERFACE_MIPI;
-			sensor_attr.mipi.index = 0;
-			break;
-		case TISP_SENSOR_VI_DVP:
-			sensor_attr.dbus_type = TX_SENSOR_DATA_INTERFACE_DVP;
-			break;
-		default:
-			ISP_ERROR("Have no this Interface Source!!!\n");
-	}
+	sensor_attr.dbus_type = TX_SENSOR_DATA_INTERFACE_MIPI;
+	sensor_attr.mipi.index = 0;
 
-	switch (info->mclk) {
-		case TISP_SENSOR_MCLK0:
-		case TISP_SENSOR_MCLK1:
-		case TISP_SENSOR_MCLK2:
-			sclka = private_devm_clk_get(&client->dev, SEN_MCLK);
-			sensor->mclk = private_devm_clk_get(sensor->dev, SEN_BCLK);
-			set_sensor_mclk_function(0);
-			break;
-		default:
-			ISP_ERROR("Have no this MCLK Source!!!\n");
-	}
+	sclka = private_devm_clk_get(&client->dev, SEN_MCLK);
+	sensor->mclk = private_devm_clk_get(sensor->dev, SEN_BCLK);
+	set_sensor_mclk_function(0);
 
 	rate = private_clk_get_rate(sensor->mclk);
 	switch (info->default_boot) {
@@ -835,8 +804,8 @@ static int sensor_attr_check(struct tx_isp_subdev *sd) {
 			break;
 	}
 
-	ISP_WARNING("\n====>[default_boot=%d] [resolution=%dx%d] [video_interface=%d] [MCLK=%d] \n", info->default_boot,
-		    wsize->width, wsize->height, info->video_interface, info->mclk);
+	ISP_WARNING("\n====> [resolution=%dx%d]] [MCLK=%d] \n", 
+		    wsize->width, wsize->height, info->mclk);
 	reset_gpio = info->rst_gpio;
 	pwdn_gpio = info->pwdn_gpio;
 
