@@ -781,7 +781,7 @@ static int sensor_attr_check(struct tx_isp_subdev *sd) {
 	sensor_attr.mipi.index = 0;
 
 	sclka = private_clk_get(&client->dev, "cgu_cim");
-	sensor->mclk = private_clk_get(sensor->dev, "cgu_cim");
+	sensor->mclk = private_clk_get(sensor->subdev, "cgu_cim");
 	set_sensor_mclk_function(0);
 
 	rate = private_clk_get_rate(sensor->mclk);
@@ -807,8 +807,6 @@ static int sensor_attr_check(struct tx_isp_subdev *sd) {
 
 	sensor_set_attr(sd, wsize);
 	sensor->priv = wsize;
-	sensor->video.max_fps = wsize->fps;
-	sensor->video.min_fps = SENSOR_OUTPUT_MIN_FPS << 16 | 1;
 	return 0;
 
 }
@@ -1020,8 +1018,8 @@ static int sensor_remove(struct i2c_client *client) {
 	if (pwdn_gpio != -1)
 		private_gpio_free(pwdn_gpio);
 
-	private_clk_disable_unprepare(sensor->mclk);
-	private_devm_clk_put(&client->dev, sensor->mclk);
+	clk_disable_unprepare(sensor->mclk);
+	private_clk_put(&client->dev, sensor->mclk);
 	tx_isp_subdev_deinit(sd);
 	kfree(sensor);
 
