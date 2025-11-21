@@ -446,7 +446,7 @@ static struct tx_isp_sensor_win_setting sensor_win_sizes[] = {
 		.width = 2304,
 		.height = 1296,
 		.fps = 15 << 16 | 1,
-		.mbus_code = V4L2_VI_FMT_SBGGR10_1X10,
+		.mbus_code = V4L2_MBUS_FMT_SBGGR10_1X10,
 		.colorspace = V4L2_COLORSPACE_SRGB,
 		.regs = sensor_init_regs_2304_1296_30fps_mipi_2lane,
 	}
@@ -780,32 +780,28 @@ static int sensor_attr_check(struct tx_isp_subdev *sd) {
 	sensor_attr.dbus_type = TX_SENSOR_DATA_INTERFACE_MIPI;
 	sensor_attr.mipi.index = 0;
 
-	sclka = private_devm_clk_get(&client->dev, SEN_MCLK);
-	sensor->mclk = private_devm_clk_get(sensor->dev, SEN_BCLK);
+	sclka = private_clk_get(&client->dev, "cgu_cim");
+	sensor->mclk = private_clk_get(sensor->dev, "cgu_cim");
 	set_sensor_mclk_function(0);
 
 	rate = private_clk_get_rate(sensor->mclk);
-	switch (info->default_boot) {
-		case 0:
+	if (((rate / 1000) % 27000) != 0) {
+		ret = clk_set_parent(sclka, clk_get(NULL, "sclka"));
+		sclka = private_clk_get(&client->dev, "sclka");
+		if (IS_ERR(sclka)) {
+			pr_err("get sclka failed\n");
+		} else {
+			rate = private_clk_get_rate(sclka);
 			if (((rate / 1000) % 27000) != 0) {
-				ret = clk_set_parent(sclka, clk_get(NULL, SEN_TCLK));
-				sclka = private_devm_clk_get(&client->dev, SEN_TCLK);
-				if (IS_ERR(sclka)) {
-					pr_err("get sclka failed\n");
-				} else {
-					rate = private_clk_get_rate(sclka);
-					if (((rate / 1000) % 27000) != 0) {
-						private_clk_set_rate(sclka, 1188000000);
-					}
-				}
+				private_clk_set_rate(sclka, 1188000000);
 			}
-			private_clk_set_rate(sensor->mclk, 27000000);
-			private_clk_prepare_enable(sensor->mclk);
-			break;
+		}
 	}
+	private_clk_set_rate(sensor->mclk, 27000000);
+	private_clk_enable(sensor->mclk);
 
 	ISP_WARNING("\n====> [resolution=%dx%d]] [MCLK=%d] \n", 
-		    wsize->width, wsize->height, info->mclk);
+		    wsize->width, wsize->height, sensor->mclk);
 	reset_gpio = info->rst_gpio;
 	pwdn_gpio = info->pwdn_gpio;
 
