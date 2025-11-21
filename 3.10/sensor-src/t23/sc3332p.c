@@ -781,8 +781,8 @@ static int sensor_attr_check(struct tx_isp_subdev *sd) {
 	sensor_attr.mipi.index = 0;
 
 	sclka = private_clk_get(&client->dev, "cgu_cim");
-	sensor->mclk = private_clk_get(sensor->subdev, "cgu_cim");
-	set_sensor_mclk_function(0);
+	sensor->mclk = private_clk_get(sensor->sd, "cgu_cim");
+//	set_sensor_mclk_function(0);
 
 	rate = private_clk_get_rate(sensor->mclk);
 	if (((rate / 1000) % 27000) != 0) {
@@ -870,7 +870,7 @@ static int sensor_sensor_ops_ioctl(struct tx_isp_subdev *sd, unsigned int cmd, v
 	switch (cmd) {
 		case TX_ISP_EVENT_SENSOR_EXPO:
 			if (arg)
-				ret = sensor_set_expo(sd, sensor_val->value);
+				ret = sensor_set_expo(sd, *(int *) arg);
 			break;
 		case TX_ISP_EVENT_SENSOR_INT_TIME:
 			//if (arg)
@@ -882,15 +882,15 @@ static int sensor_sensor_ops_ioctl(struct tx_isp_subdev *sd, unsigned int cmd, v
 			break;
 		case TX_ISP_EVENT_SENSOR_DGAIN:
 			if (arg)
-				ret = sensor_set_digital_gain(sd, sensor_val->value);
+				ret = sensor_set_digital_gain(sd, *(int *) arg);
 			break;
 		case TX_ISP_EVENT_SENSOR_BLACK_LEVEL:
 			if (arg)
-				ret = sensor_get_black_pedestal(sd, sensor_val->value);
+				ret = sensor_get_black_pedestal(sd, *(int *) arg;
 			break;
 		case TX_ISP_EVENT_SENSOR_RESIZE:
 			if (arg)
-				ret = sensor_set_mode(sd, sensor_val->value);
+				ret = sensor_set_mode(sd, *(int *) arg);
 			break;
 		case TX_ISP_EVENT_SENSOR_PREPARE_CHANGE:
 			ret = sensor_write_array(sd, sensor_stream_off_mipi);
@@ -900,11 +900,11 @@ static int sensor_sensor_ops_ioctl(struct tx_isp_subdev *sd, unsigned int cmd, v
 			break;
 		case TX_ISP_EVENT_SENSOR_FPS:
 			if (arg)
-				ret = sensor_set_fps(sd, sensor_val->value);
+				ret = sensor_set_fps(sd, *(int *) arg);
 			break;
 		case TX_ISP_EVENT_SENSOR_VFLIP:
 			if (arg)
-				ret = sensor_set_vflip(sd, sensor_val->value);
+				ret = sensor_set_vflip(sd, *(int *) arg);
 			break;
 		default:
 			break;
@@ -995,7 +995,6 @@ static int sensor_probe(struct i2c_client *client,
 
 	sd = &sensor->sd;
 	video = &sensor->video;
-	sensor->dev = &client->dev;
 	sensor_attr.expo_fs = 1;
 	sensor->video.shvflip = 1;
 	sensor->video.attr = &sensor_attr;
@@ -1019,7 +1018,7 @@ static int sensor_remove(struct i2c_client *client) {
 		private_gpio_free(pwdn_gpio);
 
 	clk_disable_unprepare(sensor->mclk);
-	private_clk_put(&client->dev, sensor->mclk);
+	private_clk_put(sensor->mclk);
 	tx_isp_subdev_deinit(sd);
 	kfree(sensor);
 
