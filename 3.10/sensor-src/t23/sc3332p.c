@@ -757,6 +757,7 @@ static int sensor_set_vflip(struct tx_isp_subdev *sd, int enable) {
 	return ret;
 }
 
+/*
 static int sensor_attr_check(struct tx_isp_subdev *sd) {
 	struct tx_isp_sensor *sensor = sd_to_sensor_device(sd);
 	struct tx_isp_sensor_register_info *info = &sensor->info;
@@ -810,6 +811,7 @@ static int sensor_attr_check(struct tx_isp_subdev *sd) {
 	return 0;
 
 }
+	*/
 
 static int sensor_g_chip_ident(struct tx_isp_subdev *sd,
 			       struct tx_isp_chip_ident *chip) {
@@ -817,7 +819,7 @@ static int sensor_g_chip_ident(struct tx_isp_subdev *sd,
 	unsigned int ident = 0;
 	int ret = ISP_SUCCESS;
 
-	sensor_attr_check(sd);
+//	sensor_attr_check(sd);
 	if (reset_gpio != -1) {
 		ret = private_gpio_request(reset_gpio, "sensor_reset");
 		if (!ret) {
@@ -886,7 +888,7 @@ static int sensor_sensor_ops_ioctl(struct tx_isp_subdev *sd, unsigned int cmd, v
 			break;
 		case TX_ISP_EVENT_SENSOR_BLACK_LEVEL:
 			if (arg)
-				ret = sensor_get_black_pedestal(sd, *(int *) arg;
+				ret = sensor_get_black_pedestal(sd, *(int *) arg);
 			break;
 		case TX_ISP_EVENT_SENSOR_RESIZE:
 			if (arg)
