@@ -700,10 +700,7 @@ static int sensor_init(struct tx_isp_subdev *sd, int enable)
 
 	sensor_update_actual_fps((wsize->fps >> 16) & 0xffff);
 
-	ret = sensor_write_array(sd, wsize->regs);
-	if (ret)
-		return ret;
-
+	sensor->video.state = TX_ISP_MODULE_INIT;
 	ret = tx_isp_call_subdev_notify(sd, TX_ISP_EVENT_SYNC_SENSOR_ATTR, &sensor->video);
 	sensor->priv = wsize;
 
@@ -712,11 +709,21 @@ static int sensor_init(struct tx_isp_subdev *sd, int enable)
 
 static int sensor_s_stream(struct tx_isp_subdev *sd, int enable)
 {
+	struct tx_isp_sensor *sensor = sd_to_sensor_device(sd);
 	int ret = 0;
 
 	if (enable) {
-		ret = sensor_write_array(sd, sensor_stream_on_mipi);
-		ISP_WARNING("%s stream on\n", SENSOR_NAME);
+		if (sensor->video.state == TX_ISP_MODULE_INIT) {
+			ret = sensor_write_array(sd, wsize->regs);
+			if (ret)
+				return ret;
+
+			sensor->video.state = TX_ISP_MODULE_RUNNING;
+		}
+		if (sensor->video.state == TX_ISP_MODULE_RUNNING) {
+			ret = sensor_write_array(sd, sensor_stream_on_mipi);
+			ISP_WARNING("%s stream on\n", SENSOR_NAME);
+		}
 	} else {
 		ret = sensor_write_array(sd, sensor_stream_off_mipi);
 		ISP_WARNING("%s stream off\n", SENSOR_NAME);
