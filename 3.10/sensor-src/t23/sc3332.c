@@ -279,7 +279,7 @@ unsigned int sensor_alloc_dgain(unsigned int isp_gain, unsigned char shift, unsi
 struct tx_isp_sensor_attribute sensor_attr = {
 	.mipi = {
 		.mode = SENSOR_MIPI_OTHER_MODE,
-		.clk = 510,
+		.clk = 486,
 		.lans = 2,
 		.settle_time_apative_en = 1,
 		.mipi_sc.sensor_csi_fmt = TX_SENSOR_RAW10,
