@@ -624,12 +624,18 @@ static int sensor_set_analog_gain(struct tx_isp_subdev *sd, int value)
 {
 	int ret = 0;
 
-	ret += sensor_write(sd, 0x3e09, (unsigned char)(value & 0xff));
-	ret += sensor_write(sd, 0x3e08, (unsigned char)(((value >> 8) & 0xff)));
+	/*set coarse dgain*/
+	ret += sensor_write(sd, 0x3e06, (unsigned char)(value & 0xff));
+	/*set fine dgain*/
+	ret += sensor_write(sd, 0x3e07, (unsigned char)((value >> 8) & 0xff));
 	if (ret < 0) {
 		ISP_ERROR("sensor_write error  %d\n", __LINE__);
 		return ret;
 	}
+
+	gain_val = value;
+	return 0;
+}
 
 	gain_val = value;
 	return 0;
