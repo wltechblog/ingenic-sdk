@@ -325,12 +325,12 @@ struct tx_isp_sensor_attribute sensor_attr = {
 	.mipi.index = 0,
 
 	.data_type = TX_SENSOR_DATA_TYPE_LINEAR,
-	.dbus_type = TX_SENSOR_DATA_INTERFACE_MIPI,
 	.max_integration_time_native = 0xAA0 - 8,
 	.integration_time_limit = 0xAA0 - 8,
 	.total_width = 2500,
 	.total_height = 0xAA0,
 	.max_integration_time = 0xAA0 - 8,
+	.one_line_expr_in_us = 25,
 	.again = 0,
 	.integration_time = 0x700,
 };
@@ -623,10 +623,10 @@ static int sensor_set_expo(struct tx_isp_subdev *sd, int value)
 	ret += sensor_write(sd, 0x3e01, (unsigned char) ((it >> 4) & 0xff));
 	ret += sensor_write(sd, 0x3e02, (unsigned char) ((it & 0x0f) << 4));
 
-	//sensor analog gain
-	ret += sensor_write(sd, 0x3e09, (unsigned char) (((again >> 8) & 0xff)));
 	//sensor dig fine gain
 	ret += sensor_write(sd, 0x3e07, (unsigned char) (again & 0xff));
+	//sensor analog gain
+	ret += sensor_write(sd, 0x3e09, (unsigned char) (((again >> 8) & 0xff)));
 	if (ret < 0) {
 		ISP_ERROR("sensor_write error  %d\n", __LINE__);
 		return ret;
@@ -754,11 +754,13 @@ static int sensor_set_fps(struct tx_isp_subdev *sd, int fps)
 		return ret;
 	}
 
-	hts = ((hts << 8) + val);
+	hts = ((hts << 8) | val);
 	vts = clk * (fps & 0xffff) / hts / ((fps & 0xffff0000) >> 16);
 
+	ret += sensor_write(sd, 0x3812, 0x00);
 	ret += sensor_write(sd, 0x320f, (unsigned char) (vts & 0xff));
 	ret += sensor_write(sd, 0x320e, (unsigned char) (vts >> 8));
+	ret += sensor_write(sd, 0x3812, 0x30);
 	if (0 != ret) {
 		ISP_ERROR("Error: %s write error\n", SENSOR_NAME);
 		return ret;
@@ -1075,6 +1077,7 @@ static int sensor_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 	sd = &sensor->sd;
 	video = &sensor->video;
+	sensor_attr.expo_fs = 1;
 	sensor->video.shvflip = shvflip;
 	sensor->video.attr = &sensor_attr;
 	sensor->video.vi_max_width = wsize->width;
